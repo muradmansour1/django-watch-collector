@@ -19,6 +19,20 @@ class WatchDetail(generics.RetrieveUpdateDestroyAPIView):
   serializer_class = WatchSerializer
   lookup_field = 'id'
 
+  # add (override) the retrieve method below
+  def retrieve(self, request, *args, **kwargs):
+    instance = self.get_object()
+    serializer = self.get_serializer(instance)
+
+    # Get the list of toys not associated with this cat
+    band_not_associated = Band.objects.exclude(id__in=instance.band.all())
+    band_serializer = BandSerializer(band_not_associated, many=True)
+
+    return Response({
+        'watch': serializer.data,
+        'band_not_associated': band_serializer.data
+    })
+
 class BrandListCreate(generics.ListCreateAPIView):
   serializer_class = BrandSerializer
 
@@ -47,3 +61,11 @@ class BandDetail(generics.RetrieveUpdateDestroyAPIView):
   queryset = Band.objects.all()
   serializer_class = BandSerializer
   lookup_field = 'id'
+
+class AddBandToWatch(APIView):
+  def post(self, request, watch_id, band_id):
+    watch = Watch.objects.get(id=watch_id)
+    band = Band.objects.get(id=band_id)
+    watch.band.add(band)
+    return Response({'message': f'Band {band.name} added to Watch {watch.name}'})
+
